@@ -43,11 +43,15 @@ class LocalHFBackend:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         tok = AutoTokenizer.from_pretrained(self.hf_id, trust_remote_code=True)
+        # Pin the whole model to GPU 0. `device_map="auto"` can silently offload
+        # parts to CPU/meta (esp. multimodal Gemma-4), which then crashes at
+        # generate with "Tensor on device meta". These local models fit on one
+        # 3090, so force single-GPU placement.
         model = AutoModelForCausalLM.from_pretrained(
             self.hf_id,
             trust_remote_code=True,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
+            dtype=torch.bfloat16,
+            device_map={"": 0},
         )
         if tok.pad_token_id is None:
             tok.pad_token = tok.eos_token
@@ -67,7 +71,9 @@ class LocalHFBackend:
             chats.append(tok.apply_chat_template(
                 msgs, tokenize=False, add_generation_prompt=True))
 
-        enc = tok(chats, return_tensors="pt", padding=True).to(model.device)
+        # Model is pinned to GPU 0; place inputs there explicitly (model.device
+        # is unreliable with a device_map).
+        enc = tok(chats, return_tensors="pt", padding=True).to("cuda:0")
         plens = enc["attention_mask"].sum(dim=1)
 
         do_sample = self.gen.temperature > 0

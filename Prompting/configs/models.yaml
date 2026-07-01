@@ -29,6 +29,7 @@ models:
     family: qwen35
     tier: large
     backend: endpoint
+    endpoint_model: qwen/qwen3.5-27b     # TODO: confirm exact slug on OpenRouter
 
   # --- Gemma 4 (instruct = -it) ---
   - alias: gemma4_e2b
@@ -54,3 +55,4 @@ models:
     family: gemma4
     tier: large
     backend: endpoint
+    endpoint_model: google/gemma-4-31b-it   # TODO: confirm exact slug on OpenRouter
