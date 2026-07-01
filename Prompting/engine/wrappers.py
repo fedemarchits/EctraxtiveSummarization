@@ -53,20 +53,27 @@ def dynamic_cap(backend, sentences, aspect, selected, system) -> List[int]:
 
 def select_document(
     backend, prompts, aspects, sentences, caps, variant, sc, dyn, system
-) -> Dict[str, List[int]]:
-    """Produce per-aspect predictions for one doc, honoring the wrappers."""
+):
+    """Produce per-aspect predictions for one doc, honoring the wrappers.
+
+    Returns (preds, raws): preds maps aspect -> indices; raws maps aspect ->
+    the raw model text (a list of N strings when self_consistency is on).
+    """
     n = len(sentences)
     if sc and sc.get("enabled"):
         ns = int(sc.get("n_samples", 5))
-        samples = [_parse_batch(backend.generate_batch(prompts, system=system), aspects, n)
-                   for _ in range(ns)]
+        passes = [backend.generate_batch(prompts, system=system) for _ in range(ns)]
+        samples = [_parse_batch(outs, aspects, n) for outs in passes]
         preds = {a: majority_vote([s[a] for s in samples], ns) for a in aspects}
+        raws = {a: [outs[j] for outs in passes] for j, a in enumerate(aspects)}
     else:
-        preds = _parse_batch(backend.generate_batch(prompts, system=system), aspects, n)
+        outs = backend.generate_batch(prompts, system=system)
+        preds = _parse_batch(outs, aspects, n)
+        raws = {a: outs[j] for j, a in enumerate(aspects)}
 
     for a in aspects:
         if dyn and dyn.get("enabled"):
             preds[a] = dynamic_cap(backend, sentences, a, preds[a], system)
         elif variant.cap is Cap.CAPPED:
             preds[a] = cap_indices_in_order(preds[a], caps.get(a))
-    return preds
+    return preds, raws

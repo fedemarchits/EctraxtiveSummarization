@@ -31,7 +31,7 @@ def _ctx_for(variant, aspect, caps, train, seed) -> RenderCtx:
     return RenderCtx(shot=variant.shot, cap=variant.cap, k=k, exemplar=exemplar)
 
 
-def _row(doc_id, doc_idx, aspect, n, pred, gold, m, rm, ro, oracle_idx) -> Dict:
+def _row(doc_id, doc_idx, aspect, n, pred, gold, m, rm, ro, oracle_idx, raw=None) -> Dict:
     gap = (ro["rougeL"] - rm["rougeL"]) if ro else 0.0
     return {
         "doc_id": doc_id, "doc_idx": doc_idx, "aspect": aspect, "num_sentences": n,
@@ -43,6 +43,9 @@ def _row(doc_id, doc_idx, aspect, n, pred, gold, m, rm, ro, oracle_idx) -> Dict:
         "rouge2_oracle": ro.get("rouge2", 0.0) if ro else 0.0,
         "rougeL_oracle": ro.get("rougeL", 0.0) if ro else 0.0,
         "oracle_gap_rougeL": gap, "oracle_indices": oracle_idx,
+        # raw model text (str, or list[str] under self_consistency); None for the
+        # derived union row, which makes no direct model call.
+        "raw_response": raw,
     }
 
 
@@ -63,7 +66,7 @@ def run_variant(variant, backend, test, train, abs_by_id, aspects, caps, seed,
 
             prompts = [tech.build(sents, a, ctxs[a]) for a in aspects]
             t0 = time.perf_counter()
-            preds = select_document(backend, prompts, aspects, sents, caps, variant, sc, dyn, SYSTEM)
+            preds, raws = select_document(backend, prompts, aspects, sents, caps, variant, sc, dyn, SYSTEM)
             latencies.append(time.perf_counter() - t0)
 
             for a in aspects:
@@ -77,7 +80,7 @@ def run_variant(variant, backend, test, train, abs_by_id, aspects, caps, seed,
                         oracle_cache[key] = M.build_oracle_indices(sents, ref)
                     oracle_idx = oracle_cache[key]
                     ro = M.rouge(ref, D.indices_to_text(sents, oracle_idx))
-                fh.write(json.dumps(_row(doc_id, doc_idx, a, n, preds[a], gold[a], m, rm, ro, oracle_idx)) + "\n")
+                fh.write(json.dumps(_row(doc_id, doc_idx, a, n, preds[a], gold[a], m, rm, ro, oracle_idx, raw=raws[a])) + "\n")
 
             # union across aspects
             gold_u = sorted(set().union(*[set(gold[a]) for a in aspects]))

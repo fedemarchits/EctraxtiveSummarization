@@ -45,8 +45,9 @@ def test_select_document_self_consistency_majority():
         ['{"selected_sentences": [1, 2]}'],
     ])
     sc = {"enabled": True, "n_samples": 3}
-    preds = select_document(be, ["p"], aspects, sents, {}, variant, sc, None, None)
+    preds, raws = select_document(be, ["p"], aspects, sents, {}, variant, sc, None, None)
     assert preds["challenge"] == [1, 2]  # 1 x3, 2 x2, both >= 2
+    assert isinstance(raws["challenge"], list) and len(raws["challenge"]) == 3  # N raw strings
 
 
 def test_select_document_fixed_cap_applies_when_no_wrappers():
@@ -54,5 +55,6 @@ def test_select_document_fixed_cap_applies_when_no_wrappers():
     sents = ["a", "b", "c", "d"]
     variant = Variant("vanilla", Shot.ZERO, Cap.CAPPED)
     be = FakeBackend([['{"selected_sentences": [1, 2, 3, 4]}']])
-    preds = select_document(be, ["p"], aspects, sents, {"challenge": 2}, variant, None, None, None)
+    preds, raws = select_document(be, ["p"], aspects, sents, {"challenge": 2}, variant, None, None, None)
     assert preds["challenge"] == [1, 2]  # capped to K=2
+    assert isinstance(raws["challenge"], str)  # single raw string when no self-consistency
