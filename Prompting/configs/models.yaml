@@ -1,0 +1,56 @@
+# Model grid: two families x four matched size tiers.
+# backend: "local" (HF on GPU) or "endpoint" (hosted API).
+# HF ids verified on the Hub 2026-07 (Qwen3.5 instruct = no suffix; Gemma 4 = -it).
+
+tiers: [small, small_medium, medium, large]
+
+models:
+  # --- Qwen3.5 (instruct variants have no suffix; "-Base" are pretrained) ---
+  - alias: qwen35_2b
+    hf_id: Qwen/Qwen3.5-2B
+    family: qwen35
+    tier: small
+    backend: local
+
+  - alias: qwen35_4b
+    hf_id: Qwen/Qwen3.5-4B
+    family: qwen35
+    tier: small_medium
+    backend: local
+
+  - alias: qwen35_9b
+    hf_id: Qwen/Qwen3.5-9B
+    family: qwen35
+    tier: medium
+    backend: local
+
+  - alias: qwen35_27b
+    hf_id: Qwen/Qwen3.5-27B
+    family: qwen35
+    tier: large
+    backend: endpoint
+
+  # --- Gemma 4 (instruct = -it) ---
+  - alias: gemma4_e2b
+    hf_id: google/gemma-4-E2B-it
+    family: gemma4
+    tier: small
+    backend: local
+
+  - alias: gemma4_e4b
+    hf_id: google/gemma-4-E4B-it
+    family: gemma4
+    tier: small_medium
+    backend: local
+
+  - alias: gemma4_12b
+    hf_id: google/gemma-4-12B-it
+    family: gemma4
+    tier: medium
+    backend: local
+
+  - alias: gemma4_31b
+    hf_id: google/gemma-4-31B-it
+    family: gemma4
+    tier: large
+    backend: endpoint
