@@ -27,11 +27,18 @@ if [ -f "$PROJECT_ROOT/.env" ]; then
     set +a
 fi
 
+# Which physical GPU(s) to use inside the container. Priority:
+#   GPUS env  >  SLURM's CUDA_VISIBLE_DEVICES  >  0
+# Pick a FREE card here (see `nvidia-smi`); GPU 0 is often busy on a shared node.
+# For 2-GPU sharding (e.g. gemma4_12b): GPUS=0,1
+GPU_SEL="${GPUS:-${CUDA_VISIBLE_DEVICES:-0}}"
+
 echo "Docker image : $IMAGE_NAME"
 echo "Project root : $PROJECT_ROOT"
 echo "Script       : $SCRIPT   args: $*"
 echo "HF_TOKEN     : $([ -n "$HF_TOKEN" ] && echo set || echo UNSET)"
 echo "endpoint     : ${OPENAI_BASE_URL:-<unset>}"
+echo "GPU(s)       : $GPU_SEL"
 
 docker run --rm \
     --gpus all \
@@ -43,7 +50,7 @@ docker run --rm \
     -e OPENAI_BASE_URL="$OPENAI_BASE_URL" \
     -e OPENAI_API_KEY="$OPENAI_API_KEY" \
     -e BUILD_RATIONALES="${BUILD_RATIONALES:-0}" \
-    -e CUDA_VISIBLE_DEVICES=0 \
+    -e CUDA_VISIBLE_DEVICES="$GPU_SEL" \
     -e HF_HOME=/workspace/.cache/huggingface \
     "$IMAGE_NAME" \
     bash "$SCRIPT" "$@"

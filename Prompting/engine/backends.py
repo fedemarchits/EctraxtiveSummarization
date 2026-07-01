@@ -30,9 +30,14 @@ class GenConfig:
 # --------------------------------------------------------------------------
 
 class LocalHFBackend:
-    def __init__(self, hf_id: str, gen: GenConfig):
+    def __init__(self, hf_id: str, gen: GenConfig, device_map=None):
         self.hf_id = hf_id
         self.gen = gen
+        # Placement: default single-GPU {"":0}. `device_map="auto"` (set per
+        # model in models.yaml) shards across all visible GPUs — use for models
+        # too big for one 3090 (e.g. gemma4_12b on 2x3090). Single-GPU avoids
+        # the multimodal Gemma-4 meta-offload crash, so keep it as the default.
+        self.device_map = device_map if device_map is not None else {"": 0}
         self._model = None
         self._tok = None
 
@@ -43,16 +48,17 @@ class LocalHFBackend:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         tok = AutoTokenizer.from_pretrained(self.hf_id, trust_remote_code=True)
-        # Pin the whole model to GPU 0. `device_map="auto"` can silently offload
-        # parts to CPU/meta (esp. multimodal Gemma-4), which then crashes at
-        # generate with "Tensor on device meta". These local models fit on one
-        # 3090, so force single-GPU placement.
-        model = AutoModelForCausalLM.from_pretrained(
-            self.hf_id,
+        model_kwargs = dict(
             trust_remote_code=True,
             dtype=torch.bfloat16,
-            device_map={"": 0},
+            device_map=self.device_map,
         )
+        # When sharding ("auto"), cap memory to the GPUs only so nothing spills
+        # to CPU/disk (which reintroduces the meta-device crash).
+        if self.device_map == "auto":
+            n = torch.cuda.device_count()
+            model_kwargs["max_memory"] = {i: "23GiB" for i in range(n)}
+        model = AutoModelForCausalLM.from_pretrained(self.hf_id, **model_kwargs)
         if tok.pad_token_id is None:
             tok.pad_token = tok.eos_token
         tok.padding_side = "left"
@@ -148,7 +154,7 @@ def get_backend(alias: str, models_yaml: str, gen: Optional[GenConfig] = None):
     gen = gen or GenConfig()
     kind = m.get("backend", "local")
     if kind == "local":
-        return LocalHFBackend(m["hf_id"], gen)
+        return LocalHFBackend(m["hf_id"], gen, device_map=m.get("device_map"))
     if kind == "endpoint":
         return EndpointBackend(m.get("endpoint_model", m["hf_id"]), gen)
     raise ValueError(f"unknown backend '{kind}' for model {alias}")
