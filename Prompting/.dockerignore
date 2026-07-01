@@ -1,0 +1,13 @@
+# Keep the build context small — the image only needs requirements.txt.
+# Code + data are mounted at runtime via -v, not baked in.
+.git
+__pycache__/
+*.pyc
+.venv/
+.env
+results/
+data/
+.cache/
+*.jsonl
+*.csv
+.DS_Store
