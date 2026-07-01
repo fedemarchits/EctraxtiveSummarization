@@ -25,6 +25,8 @@ import yaml
 from prompts.rationale import REASONING_TECHNIQUES, RationaleShot, save_rationale
 from prompts.shared import header, numbered
 
+SYSTEM = "You are an expert in extractive summarization."
+
 # How to ask each technique to REVEAL its working (opposite of the run-time
 # "do not include reasoning" instruction). End marker is parsed for the answer.
 _ELICIT = {
@@ -93,7 +95,7 @@ def main() -> None:
             saved = False
             for ex in iter_exemplars(train, aspect, seed=seed, limit=max_tries):
                 prompt = _elicitation_prompt(technique, aspect, ex.sentences)
-                out = backend.generate(prompt)
+                out = backend.generate_batch([prompt], system=SYSTEM)[0]
                 pred = sorted(_parse_indices(out))
                 if pred == sorted(int(i) for i in ex.gold_indices):
                     shot = RationaleShot(
