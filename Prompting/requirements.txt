@@ -5,6 +5,7 @@ numpy
 scikit-learn        # TF-IDF centrality (tool_augmented)
 datasets
 transformers
+accelerate          # required by device_map="auto" in the local backend
 torch
 openai              # endpoint backend (large tiers)
 rouge-score
