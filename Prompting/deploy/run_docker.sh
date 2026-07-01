@@ -16,9 +16,22 @@ shift || true
 
 # Mount the Prompting/ root (parent of this deploy/ dir), not the cwd.
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Load secrets once from Prompting/.env (HF_TOKEN, OPENAI_*), if present.
+# .env is the source of truth for secrets; put them there instead of the CLI.
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    echo "Loading secrets from .env"
+    set -a
+    # shellcheck disable=SC1090
+    . "$PROJECT_ROOT/.env"
+    set +a
+fi
+
 echo "Docker image : $IMAGE_NAME"
 echo "Project root : $PROJECT_ROOT"
 echo "Script       : $SCRIPT   args: $*"
+echo "HF_TOKEN     : $([ -n "$HF_TOKEN" ] && echo set || echo UNSET)"
+echo "endpoint     : ${OPENAI_BASE_URL:-<unset>}"
 
 docker run --rm \
     --gpus all \
@@ -26,6 +39,7 @@ docker run --rm \
     -v "$PROJECT_ROOT":/workspace \
     -v /llms:/llms \
     -e HF_TOKEN="$HF_TOKEN" \
+    -e HUGGING_FACE_HUB_TOKEN="$HF_TOKEN" \
     -e OPENAI_BASE_URL="$OPENAI_BASE_URL" \
     -e OPENAI_API_KEY="$OPENAI_API_KEY" \
     -e BUILD_RATIONALES="${BUILD_RATIONALES:-0}" \
