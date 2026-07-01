@@ -8,7 +8,7 @@ dataset:
 capping:
   # K = median number of gold sentences per aspect, computed over the TRAIN
   # split. No grid search. One K per aspect, reused for all capped variants.
-  source_split: train
+  source_split: validation
   strategy: median_gold_per_aspect
 
 fewshot:
@@ -23,25 +23,25 @@ rationale:
   # One strong reference model generates them once; verified against gold;
   # all grid models reuse the same exemplar+trace. Other techniques use
   # answer-only one-shot examples. Missing trace -> graceful answer-only.
-  source_model: qwen35_27b       # strong reference model, produced once
+  source_model: qwen35_27b # strong reference model, produced once
   cache_dir: data/shots/rationales
-  max_exemplar_tries: 10         # try up to N train exemplars until one matches gold
+  max_exemplar_tries: 10 # try up to N train exemplars until one matches gold
 
 inference:
   max_new_tokens: 128
-  temperature: 0.0          # deterministic for all but self_consistency
+  temperature: 0.0 # deterministic for all but self_consistency
   seed: 42
 
-self_consistency:            # orthogonal wrapper, off by default
+self_consistency: # orthogonal wrapper, off by default
   enabled: false
   n_samples: 5
-  temperature: 0.7           # sampling temperature used only when enabled
+  temperature: 0.7 # sampling temperature used only when enabled
 
-dynamic_capper:              # orthogonal wrapper, off by default
+dynamic_capper: # orthogonal wrapper, off by default
   # When enabled, a second model pass prunes each selection to the essential
   # sentences (LLM chooses the count). Replaces the fixed-K cap for that run.
   enabled: false
 
 output:
-  results_dir: results       # results/<model>/<variant_slug>.jsonl
-  resume: true               # skip variants whose output already exists
+  results_dir: results # results/<model>/<variant_slug>.jsonl
+  resume: true # skip variants whose output already exists
