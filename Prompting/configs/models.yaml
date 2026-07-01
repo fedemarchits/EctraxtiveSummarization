@@ -49,6 +49,7 @@ models:
     family: gemma4
     tier: medium
     backend: local
+    device_map: auto        # ~24GB bf16 -> shard across 2x 3090 (run with GPUS=0,1)
 
   - alias: gemma4_31b
     hf_id: google/gemma-4-31B-it
