@@ -11,9 +11,18 @@
 #   BUILD_RATIONALES=1 HF_TOKEN=hf_xxx MODEL=gemma4_e2b sbatch deploy/sbatch_script.sh
 #
 # One model per job. Submit several for the full grid (each is resume-safe).
+#
+# This cluster uses --gpus-per-node= (not --gres=gpu:) and -N 1. Use
+# --gpus-per-node so multiple GPUs land on ONE node (plain --gpus spreads them
+# 1/node -> "required nodes (2)" error). Override on the CLI for sharding,
+# e.g. gemma4_12b on 2x 3090 (faretra only):
+#   MODEL=gemma4_12b sbatch -N 1 --gpus-per-node=nvidia_geforce_rtx_3090:2 -w faretra deploy/sbatch_script.sh
+# Single-GPU models (default) can go to any node — but the repo + docker image
+# must exist on that node (no shared FS). Pin with -w <node> if unsure.
 
 #SBATCH --job-name=prompting
-#SBATCH --gres=gpu:nvidia_geforce_rtx_3090:1
+#SBATCH -N 1
+#SBATCH --gpus-per-node=nvidia_geforce_rtx_3090:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=48G
 #SBATCH --time=12:00:00
