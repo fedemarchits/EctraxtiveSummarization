@@ -57,3 +57,11 @@ models:
     tier: large
     backend: endpoint
     endpoint_model: google/gemma-4-31b-it   # TODO: confirm exact slug on OpenRouter
+
+  # --- Reference model (rationale traces only; not part of the scaling grid) ---
+  - alias: qwen35_397b
+    hf_id: Qwen/Qwen3.5-397B-A17B
+    family: qwen35
+    tier: reference
+    backend: endpoint
+    endpoint_model: qwen/qwen3.5-397b-a17b  # OpenRouter slug (verified 2026-07)

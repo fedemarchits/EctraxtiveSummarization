@@ -69,13 +69,20 @@ class LocalHFBackend:
 
         self._ensure()
         tok, model = self._tok, self._model
+        # Qwen3.x is a hybrid reasoning model: with thinking on it can spend the
+        # whole budget in <think> and emit no/short JSON. This task wants a direct
+        # answer, so disable thinking. The kwarg is ignored by templates that
+        # don't use it (e.g. Gemma), so it's safe to pass unconditionally.
+        tmpl_kwargs = {}
+        if "qwen" in self.hf_id.lower():
+            tmpl_kwargs["enable_thinking"] = False
         chats = []
         for p in prompts:
             msgs = ([{"role": "system", "content": system}] if system else []) + [
                 {"role": "user", "content": p}
             ]
             chats.append(tok.apply_chat_template(
-                msgs, tokenize=False, add_generation_prompt=True))
+                msgs, tokenize=False, add_generation_prompt=True, **tmpl_kwargs))
 
         # Model is pinned to GPU 0; place inputs there explicitly (model.device
         # is unreliable with a device_map).
@@ -104,9 +111,14 @@ class LocalHFBackend:
 # --------------------------------------------------------------------------
 
 class EndpointBackend:
-    def __init__(self, model_id: str, gen: GenConfig):
+    def __init__(self, model_id: str, gen: GenConfig, disable_reasoning: bool = True):
         self.model_id = model_id
         self.gen = gen
+        # Reasoning models (Qwen3.5) spend the token budget in a hidden reasoning
+        # channel and return EMPTY content at small max_tokens. This task wants a
+        # direct answer, so disable thinking by default. Harmless for non-reasoning
+        # models (Gemma) — OpenRouter ignores the flag.
+        self.disable_reasoning = disable_reasoning
         self._client = None
 
     def _ensure(self):
@@ -114,9 +126,13 @@ class EndpointBackend:
             return
         import os
         from openai import OpenAI
+        # Bound each request so a stalled/queued endpoint fails fast instead of
+        # hanging for hours (large MoE endpoints are often throttled).
         self._client = OpenAI(
             base_url=os.environ.get("OPENAI_BASE_URL"),
             api_key=os.environ.get("OPENAI_API_KEY"),
+            timeout=float(os.environ.get("OPENROUTER_TIMEOUT", "120")),
+            max_retries=2,
         )
 
     def generate_batch(self, prompts: List[str], system: Optional[str] = None) -> List[str]:
@@ -126,12 +142,14 @@ class EndpointBackend:
             msgs = ([{"role": "system", "content": system}] if system else []) + [
                 {"role": "user", "content": p}
             ]
+            extra = {"reasoning": {"enabled": False}} if self.disable_reasoning else None
             resp = self._client.chat.completions.create(
                 model=self.model_id,
                 messages=msgs,
                 max_tokens=self.gen.max_new_tokens,
                 temperature=self.gen.temperature,
                 seed=self.gen.seed,
+                extra_body=extra,
             )
             out.append(resp.choices[0].message.content or "")
         return out

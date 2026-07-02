@@ -79,10 +79,10 @@ def reasoning_example_block(
     rf = render_fn or numbered
     return (
         f"Example (one-shot; exemplar and reasoning from the {shot.source_model} "
-        "reference model, verified against gold):\n"
+        "reference model):\n"
         "Input:\n" + rf(shot.exemplar_sentences) + "\n\n"
         "Reasoning:\n" + shot.rationale.strip() + "\n\n"
-        f"Selected indices: {list(shot.gold_indices)}\n\n"
+        f"Selected indices: {list(shot.shown_indices)}\n\n"
         "---\n\nNew task:\n"
     )
 

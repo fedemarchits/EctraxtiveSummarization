@@ -1,0 +1,46 @@
+{
+  "technique": "scoring_based",
+  "aspect": "challenge",
+  "source_model": "qwen35_397b",
+  "exemplar_sentences": [
+    "Named entity phrases are some of the most difficult phrases to translate because new phrases can appear from nowhere , and because many are domain specific , not to be found in bilingual dictionaries .",
+    "We present a novel algorithm for translating named entity phrases using easily obtainable monolingual and bilingual resources .",
+    "We report on the application and evaluation of this algorithm in translating Arabic named entities to English .",
+    "We also compare our results with the results obtained from human translations and a commercial system for the same task .",
+    "Named entity phrases are being introduced in news stories on a daily basis in the form of personal names , organizations , locations , temporal phrases , and monetary expressions .",
+    "While the identification of named entities in text has received significant attention ( e.g. , Mikheev et al . ( 1999 ) and Bikel et al . ( 1999 ) ) , translation of named entities has not .",
+    "This translation problem is especially challenging because new phrases can appear from nowhere , and because many named-entities are domain specific , not to be found in bilingual dictionaries .",
+    "A system that specializes in translating named entities such as the one we describe here would be an important tool for many NLP applications .",
+    "Statisti-cal machine translation systems can use such a system as a component to handle phrase translation in order to improve overall translation quality .",
+    "Cross-Lingual Information Retrieval ( CLIR ) systems could identify relevant documents based on translations of named entity phrases provided by such a system .",
+    "Question Answering ( QA ) systems could benefit substantially from such a tool since the answer to many factoid questions involve named entities ( e.g. , answers to who questions usually involve Persons / Organizations , where questions involve Locations , and when questions involve Temporal Expressions ) .",
+    "In this paper , we describe a system for Arabic-English named entity translation , though the technique is applicable to any language pair and does not require especially difficult-to-obtain resources .",
+    "The rest of this paper is organized as follows .",
+    "In Section 2 , we give an overview of our approach .",
+    "In Section 3 , we describe how translation candidates are generated .",
+    "In Section 4 , we show how monolingual clues are used to help re-rank the translation candidates list .",
+    "In Section 5 , we describe how the candidates list can be extended using contextual information .",
+    "We conclude this paper with the evaluation results of our translation algorithm on a test set .",
+    "We also compare our system with human translators and a commercial system .",
+    "We have presented a named entity translation algorithm that performs at near human translation accuracy when translating Arabic named entities to English .",
+    "The algorithm uses very limited amount of hard-to-obtain bilingual resources and should be easily adaptable to other languages .",
+    "We would like to apply to other languages such as Chinese and Japanese and to investigate whether the current algorithm would perform as well or whether new algorithms might be needed .",
+    "Currently , our translation algorithm does not use any dictionary of named entities and they are translated on the fly .",
+    "Translating a common name incorrectly has a significant effect on the translation accuracy .",
+    "We would like to experiment with adding a small named entity translation dictionary for common names and see if this might improve the overall translation accuracy ."
+  ],
+  "shown_indices": [
+    1,
+    6,
+    7,
+    23,
+    24
+  ],
+  "gold_indices": [
+    1,
+    6,
+    7
+  ],
+  "f1": 0.7499999999999999,
+  "rationale": "Sentence 1: 5 - It explicitly defines the difficulty and reasons behind the translation problem.\nSentence 2: 1 - It describes the proposed solution method.\nSentence 3: 1 - It describes the evaluation process.\nSentence 4: 1 - It describes comparative evaluation results.\nSentence 5: 2 - It provides background context on entity frequency.\nSentence 6: 4 - It highlights a significant research gap in entity translation.\nSentence 7: 5 - It explicitly labels the task as challenging and explains why.\nSentence 8: 3 - It suggests utility rather than defining the core problem.\nSentence 9: 2 - It describes application benefits.\nSentence 10: 2 - It describes application benefits.\nSentence 11: 2 - It describes application benefits.\nSentence 12: 1 - It describes the system scope.\nSentence 13: 1 - It describes paper organization.\nSentence 14: 1 - It describes paper organization.\nSentence 15: 1 - It describes paper organization.\nSentence 16: 1 - It describes paper organization.\nSentence 17: 1 - It describes paper organization.\nSentence 18: 1 - It describes paper organization.\nSentence 19: 1 - It describes paper organization.\nSentence 20: 1 - It summarizes performance results.\nSentence 21: 2 - It highlights solution advantages.\nSentence 22: 3 - It indicates uncertainty about future performance.\nSentence 23: 4 - It states a specific limitation of the current algorithm.\nSentence 24: 4 - It identifies a specific source of error affecting accuracy.\nSentence 25: 3 - It suggests improvement needed for current limitation."
+}

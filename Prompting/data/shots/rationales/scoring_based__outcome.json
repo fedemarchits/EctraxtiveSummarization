@@ -1,0 +1,53 @@
+{
+  "technique": "scoring_based",
+  "aspect": "outcome",
+  "source_model": "qwen35_397b",
+  "exemplar_sentences": [
+    "News headline generation aims to produce a short sentence to attract readers to read the news .",
+    "One news article often contains multiple keyphrases that are of interest to different users , which can naturally have multiple reasonable headlines .",
+    "However , most existing methods focus on the single headline generation .",
+    "In this paper , we propose generating multiple headlines with keyphrases of user interests , whose main idea is to generate multiple keyphrases of interest to users for the news first , and then generate multiple keyphrase-relevant headlines .",
+    "We propose a multi-source Transformer decoder , which takes three sources as inputs : ( a ) keyphrase , ( b ) keyphrase-filtered article , and ( c ) original article to generate keyphrase-relevant , highquality , and diverse headlines .",
+    "Furthermore , we propose a simple and effective method to mine the keyphrases of interest in the news article and build a first large-scale keyphraseaware news headline corpus , which contains over 180 K aligned triples of news article , headline , keyphrase .",
+    "Extensive experimental comparisons on the real-world dataset show that the proposed method achieves state-of-theart results in terms of quality and diversity 1 .",
+    "News Headline Generation is an under-explored subtask of text summarization ( See et al . , 2017 ; Gehrmann et al . , 2018 ; Zhong et al . , 2019 ) .",
+    "Unlike text summaries that contain multiple contextrelated sentences to cover the main ideas of a document , news headlines often contain a single short sentence to encourage users to read the news .",
+    "Since one news article typically contains multiple keyphrases or topics of interest to different users , it is useful to generate multiple headlines covering different keyphrases for the news article .",
+    "Multiheadline generation aims to generate multiple independent headlines , which allows us to recommend news with different news headlines based on the interests of users .",
+    "Besides , multi-headline generation can provide multiple hints for human news editors to assist them in writing news headlines .",
+    "However , most existing methods ( Takase et al . , 2016 ; Ayana et al . , 2016 ; Murao et al . , 2019 ; Colmenares et al . , 2019 ; Zhang et al . , 2018 ) focus on single-headline generation .",
+    "The headline generation process is treated as an one-to-one mapping ( the input is an article and the output is a headline ) , which trains and tests the models without any additional guiding information or constraints .",
+    "We argue that this may lead to two problems .",
+    "Firstly , since it is reasonable to generate multiple headlines for the news , training to generate the single ground-truth might result in a lack of more detailed guidance .",
+    "Even worse , a single ground-truth without any constraint or guidance is often not enough to measure the quality of the generated headline for model testing .",
+    "For example , even if a generated headline is considered reasonable by humans , it can get a low score in ROUGE ( Lin , 2004 ) , because it might focus on the keyphrases or aspects that are not consistent with the ground-truth .",
+    "In this paper , we incorporate the keyphrase information into the headline generation as additional guidance .",
+    "Unlike one-to-one mapping employed in previous works , we treat the headline generation process as a two-to-one mapping , where the inputs are news articles and keyphrases , and the output is a headline .",
+    "We propose a keyphrase-aware news multi-headline generation method , which contains two modules : ( a ) Keyphrase Generation Model , which aims to generate multiple keyphrases of interest to users for the news article .",
+    "( b ) Keyphrase-Aware Multi-Headline Generation Model , which takes the news article and a keyphrase as input and generates a keyphrase-relevant news headline .",
+    "For training models , we build a first large-scale news keyphrase-aware headline corpus that contains 180 K aligned triples of news article , headline , keyphrase .",
+    "As in years past , a lot of the food trends of the year were based on creating perfectly photogenic dishes .",
+    "An aesthetically pleasing dish , however , does n't mean it will stand the test of time .",
+    "In fact , it 's not uncommon for food trends to be all the hype one year and die out the next .",
+    "From broccoli coffee to \" bowl food , \" here are 10 food trends that you likely wo n't see in 2019 .",
+    "...",
+    "[ 15 sentences with 307 words are abbreviated from here . ]",
+    "In 2018 , restaurants all over the US decided it was a good idea to place gold foil on everything from ice cream to chicken wings to pizza resulting in an expensive food trend .",
+    "For example , the Ainsworth in New York City sells $ 1,000 worth of gold covered chicken wings .",
+    "It seems everyone can agree that this is a food trend that might soon disappear .",
+    "In this paper , we demonstrate how to enable news headline generation systems to be aware of keyphrases such that the model can generate diverse news headlines in a controlled manner .",
+    "We also build a first large-scale keyphrase-aware news headline corpus , which is based on mining the keyphrases of users ' interests in news articles with user queries .",
+    "Moreover , we propose a keyphraseaware news multi-headline generation model that contains a multi-source Transformer decoder with three variants of attention-based fusing mechanisms .",
+    "Extensive experiments on the real-world dataset show that our approach can generate highquality , keyphrase-relevant , and diverse news headlines , which outperforms many strong baselines ."
+  ],
+  "shown_indices": [
+    7,
+    36
+  ],
+  "gold_indices": [
+    7,
+    36
+  ],
+  "f1": 1.0,
+  "rationale": "Sentence 1: 1 - This sentence defines the general goal of the task rather than specific results.\nSentence 2: 1 - This sentence describes article characteristics without presenting findings.\nSentence 3: 1 - This sentence identifies a limitation in existing methods.\nSentence 4: 1 - This sentence proposes the main idea of the approach.\nSentence 5: 1 - This sentence describes the model architecture details.\nSentence 6: 1 - This sentence describes the dataset construction method.\nSentence 7: 5 - This sentence reports state-of-the-art experimental results and metrics.\nSentence 8: 1 - This sentence provides background context on the subtask.\nSentence 9: 1 - This sentence contrasts headlines with text summaries.\nSentence 10: 2 - This sentence suggests utility but lacks measured results.\nSentence 11: 1 - This sentence defines the multiheadline generation task.\nSentence 12: 2 - This sentence describes potential benefits for editors.\nSentence 13: 1 - This sentence highlights limitations of prior work.\nSentence 14: 1 - This sentence describes the standard process mapping.\nSentence 15: 1 - This sentence introduces arguments about problems.\nSentence 16: 1 - This sentence details specific training guidance issues.\nSentence 17: 1 - This sentence discusses measurement limitations.\nSentence 18: 1 - This sentence gives an example of evaluation flaws.\nSentence 19: 1 - This sentence states the proposed incorporation of keyphrases.\nSentence 20: 1 - This sentence defines the new mapping strategy.\nSentence 21: 1 - This sentence outlines the first model module.\nSentence 22: 1 - This sentence outlines the second model module.\nSentence 23: 1 - This sentence mentions the training corpus creation.\nSentence 24: 1 - This sentence discusses unrelated food trends.\nSentence 25: 1 - This sentence discusses unrelated food aesthetics.\nSentence 26: 1 - This sentence discusses unrelated food trend longevity.\nSentence 27: 1 - This sentence lists unrelated food examples.\nSentence 28: 1 - This sentence indicates omitted text content.\nSentence 29: 1 - This sentence notes abbreviation of unrelated text.\nSentence 30: 1 - This sentence describes unrelated gold foil trend.\nSentence 31: 1 - This sentence gives unrelated price example.\nSentence 32: 1 - This sentence predicts unrelated trend disappearance.\nSentence 33: 3 - This sentence claims demonstrated capability of the system.\nSentence 34: 1 - This sentence summarizes corpus construction contribution.\nSentence 35: 1 - This sentence summarizes model proposal contribution.\nSentence 36: 5 - This sentence confirms performance improvements over baselines."
+}

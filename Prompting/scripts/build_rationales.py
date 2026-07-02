@@ -74,44 +74,76 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/experiment.yaml")
     ap.add_argument("--models", default="configs/models.yaml")
+    ap.add_argument("--force", action="store_true",
+                    help="regenerate cells that already have a trace file")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
     aspects = cfg["dataset"]["aspects"]
     ref_alias = cfg["rationale"]["source_model"]
     max_tries = int(cfg["rationale"].get("max_exemplar_tries", 10))
+    # Best-overlap acceptance: a model won't reproduce human gold exactly, so we
+    # keep the exemplar whose picks best overlap gold. Early-accept once overlap
+    # is strong; otherwise take the best seen if it clears the floor.
+    accept_f1 = float(cfg["rationale"].get("accept_f1", 0.7))
+    min_f1 = float(cfg["rationale"].get("min_f1", 0.4))
 
     # Ported engine pieces (stubs until then -> clear error here).
-    from engine.backends import get_backend
+    from engine.backends import GenConfig, get_backend
     from engine.data import load_split
+    from engine.metrics import prf
     from prompts.fewshot import iter_exemplars
+    from prompts.rationale import load_rationale
 
-    backend = get_backend(ref_alias, args.models)
+    # Traces need room to reason — the run-time default (128) would truncate.
+    ref_gen = GenConfig(
+        max_new_tokens=int(cfg["rationale"].get("max_new_tokens", 1024)),
+        temperature=0.0,
+    )
+    backend = get_backend(ref_alias, args.models, ref_gen)
     train = load_split("train")
     seed = int(cfg["fewshot"]["seed"])
 
     for technique in sorted(REASONING_TECHNIQUES):
         for aspect in aspects:
-            saved = False
+            # Resume-safe: skip cells already cached unless --force. Lets a run
+            # pick up where a quota/crash left off without re-spending.
+            if not args.force and load_rationale(technique, aspect) is not None:
+                print(f"[have] {technique}/{aspect} (cached; use --force to redo)")
+                continue
+            best = None  # (f1, exemplar, model_pred, trace)
             for ex in iter_exemplars(train, aspect, seed=seed, limit=max_tries):
                 prompt = _elicitation_prompt(technique, aspect, ex.sentences)
-                out = backend.generate_batch([prompt], system=SYSTEM)[0]
+                try:
+                    out = backend.generate_batch([prompt], system=SYSTEM)[0]
+                except Exception as e:  # timeout / rate limit / transient API error
+                    print(f"  [warn] {technique}/{aspect}: call failed ({type(e).__name__}); "
+                          "skipping this exemplar")
+                    continue
                 pred = sorted(_parse_indices(out))
-                if pred == sorted(int(i) for i in ex.gold_indices):
-                    shot = RationaleShot(
-                        technique=technique,
-                        aspect=aspect,
-                        source_model=ref_alias,
-                        exemplar_sentences=list(ex.sentences),
-                        gold_indices=list(ex.gold_indices),
-                        rationale=_strip_answer_line(out),
-                    )
-                    path = save_rationale(shot)
-                    print(f"[ok]   {technique}/{aspect} -> {path.name}")
-                    saved = True
-                    break
-            if not saved:
-                print(f"[skip] {technique}/{aspect}: no exemplar matched gold; "
+                gold = sorted(int(i) for i in ex.gold_indices)
+                f1 = prf(gold, pred)["f1"]
+                if best is None or f1 > best[0]:
+                    best = (f1, ex, pred, _strip_answer_line(out))
+                if f1 >= accept_f1:
+                    break  # strong enough, stop early
+            if best is not None and best[0] >= min_f1:
+                f1, ex, pred, trace = best
+                shot = RationaleShot(
+                    technique=technique,
+                    aspect=aspect,
+                    source_model=ref_alias,
+                    exemplar_sentences=list(ex.sentences),
+                    shown_indices=pred,
+                    gold_indices=list(ex.gold_indices),
+                    f1=f1,
+                    rationale=trace,
+                )
+                path = save_rationale(shot)
+                print(f"[ok]   {technique}/{aspect} -> {path.name} (F1={f1:.2f})")
+            else:
+                bf1 = best[0] if best else 0.0
+                print(f"[skip] {technique}/{aspect}: best overlap F1={bf1:.2f} < {min_f1}; "
                       "one-shot falls back to answer-only.")
 
 

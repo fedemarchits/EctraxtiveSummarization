@@ -33,8 +33,10 @@ class RationaleShot:
     aspect: str
     source_model: str          # the reference model that produced the trace
     exemplar_sentences: List[str]
-    gold_indices: List[int]
-    rationale: str             # the reference model's real, gold-verified trace
+    shown_indices: List[int]   # the reference model's OWN answer (what the example displays)
+    gold_indices: List[int]    # human gold for this exemplar (record only)
+    f1: float                  # overlap of shown vs gold (best-overlap selection)
+    rationale: str             # the reference model's real reasoning trace
 
 
 _cache: Dict[Tuple[str, str, str], Optional[RationaleShot]] = {}

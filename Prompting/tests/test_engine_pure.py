@@ -40,15 +40,18 @@ def test_parse_selection_garbage_is_empty():
 
 # ---- grid ----------------------------------------------------------------
 
-def test_grid_resolves_46_variants(tmp_path):
-    # empty grid file -> every technique defaults to its full valid grid
+def test_grid_resolves_full_variants(tmp_path):
+    # empty grid file -> every technique defaults to its full valid grid.
+    # 11 full-grid techniques x4 + negative_aware x2 + 4 _trace techniques x2 = 54
     g = tmp_path / "grid.yaml"
     g.write_text("techniques: {}\n")
     variants = resolve_variants(str(g))
-    assert len(variants) == 46
-    # negative_aware must stay one-shot only even under default expansion
-    na = [v for v in variants if v.technique == "negative_aware"]
-    assert na and all(v.shot is Shot.ONE for v in na)
+    assert len(variants) == 54
+    # negative_aware and the *_trace techniques must stay one-shot only
+    for name in ("negative_aware", "chain_of_thought_trace", "self_ask_trace",
+                 "scoring_based_trace", "salience_inference_trace"):
+        vs = [v for v in variants if v.technique == name]
+        assert vs and all(v.shot is Shot.ONE for v in vs), name
 
 
 def test_grid_restriction_is_intersected(tmp_path):

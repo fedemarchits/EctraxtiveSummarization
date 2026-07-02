@@ -23,12 +23,18 @@ rationale:
   # One strong reference model generates them once; verified against gold;
   # all grid models reuse the same exemplar+trace. Other techniques use
   # answer-only one-shot examples. Missing trace -> graceful answer-only.
-  source_model: qwen35_27b # strong reference model, produced once
+  source_model: qwen35_397b # strong reference model (OpenRouter), produced once
   cache_dir: data/shots/rationales
-  max_exemplar_tries: 10 # try up to N train exemplars until one matches gold
+  max_exemplar_tries: 10 # try up to N train exemplars per (technique, aspect)
+  max_new_tokens: 1024   # room for a full reasoning trace (run-time cap is 128)
+  # Best-overlap acceptance (the ref model won't hit human gold exactly):
+  accept_f1: 0.7         # early-accept an exemplar once shown-vs-gold F1 >= this
+  min_f1: 0.4            # else keep the best seen if it clears this floor, else skip
 
 inference:
-  max_new_tokens: 128
+  # 128 truncated long index arrays (verbose models over-select on 30-40 sentence
+  # docs) -> unparseable JSON -> false "empty" predictions. 512 lets the array close.
+  max_new_tokens: 512
   temperature: 0.0 # deterministic for all but self_consistency
   seed: 42
 
