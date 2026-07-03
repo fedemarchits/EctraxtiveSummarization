@@ -64,11 +64,32 @@ class LocalHFBackend:
         tok.padding_side = "left"
         self._model, self._tok = model.eval(), tok
 
+    def _gen_chats(self, chats: List[str]) -> List[str]:
+        import torch
+        tok, model = self._tok, self._model
+        enc = tok(chats, return_tensors="pt", padding=True).to("cuda:0")
+        plens = enc["attention_mask"].sum(dim=1)
+        do_sample = self.gen.temperature > 0
+        with torch.inference_mode():
+            out = model.generate(
+                **enc,
+                max_new_tokens=self.gen.max_new_tokens,
+                do_sample=do_sample,
+                temperature=self.gen.temperature if do_sample else None,
+                use_cache=True,
+                eos_token_id=tok.eos_token_id,
+                pad_token_id=tok.pad_token_id,
+            )
+        texts = [tok.decode(row[int(pl):], skip_special_tokens=True)
+                 for row, pl in zip(out, plens)]
+        del enc, out
+        return texts
+
     def generate_batch(self, prompts: List[str], system: Optional[str] = None) -> List[str]:
         import torch
 
         self._ensure()
-        tok, model = self._tok, self._model
+        tok = self._tok
         # Qwen3.x is a hybrid reasoning model: with thinking on it can spend the
         # whole budget in <think> and emit no/short JSON. This task wants a direct
         # answer, so disable thinking. The kwarg is ignored by templates that
@@ -84,26 +105,23 @@ class LocalHFBackend:
             chats.append(tok.apply_chat_template(
                 msgs, tokenize=False, add_generation_prompt=True, **tmpl_kwargs))
 
-        # Model is pinned to GPU 0; place inputs there explicitly (model.device
-        # is unreliable with a device_map).
-        enc = tok(chats, return_tensors="pt", padding=True).to("cuda:0")
-        plens = enc["attention_mask"].sum(dim=1)
+        # Try the whole batch; on OOM (tight-fit models + long prompts) fall back
+        # to one prompt at a time, clearing the cache between, so a peak spike on
+        # one long variant doesn't kill the run.
+        try:
+            return self._gen_chats(chats)
+        except torch.cuda.OutOfMemoryError:
+            torch.cuda.empty_cache()
+            texts: List[str] = []
+            for c in chats:
+                texts.extend(self._gen_chats([c]))
+                torch.cuda.empty_cache()
+            return texts
 
-        do_sample = self.gen.temperature > 0
-        with torch.inference_mode():
-            out = model.generate(
-                **enc,
-                max_new_tokens=self.gen.max_new_tokens,
-                do_sample=do_sample,
-                temperature=self.gen.temperature if do_sample else None,
-                use_cache=True,
-                eos_token_id=tok.eos_token_id,
-                pad_token_id=tok.pad_token_id,
-            )
-        texts = []
-        for row, plen in zip(out, plens):
-            texts.append(tok.decode(row[int(plen):], skip_special_tokens=True))
-        return texts
+    def free_memory(self) -> None:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 # --------------------------------------------------------------------------
@@ -153,6 +171,9 @@ class EndpointBackend:
             )
             out.append(resp.choices[0].message.content or "")
         return out
+
+    def free_memory(self) -> None:  # no-op; nothing local to free
+        pass
 
 
 # --------------------------------------------------------------------------

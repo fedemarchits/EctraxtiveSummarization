@@ -5,6 +5,8 @@ set -e
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 export TOKENIZERS_PARALLELISM=false
+# Reduce CUDA allocator fragmentation on tight-fit models (E4B etc.).
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export HF_HOME="${HF_HOME:-/workspace/.cache/huggingface}"
 export TRANSFORMERS_CACHE="$HF_HOME"
 mkdir -p /tmp && chmod 1777 /tmp 2>/dev/null || true

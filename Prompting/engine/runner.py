@@ -147,3 +147,4 @@ def run(model_alias: str,
         print(f"[run]  {model_alias}/{v.slug}")
         run_variant(v, backend, test, train, abs_by_id, aspects, caps, seed,
                     oracle_cache, out_path, sc=sc, dyn=dyn)
+        backend.free_memory()  # release cached VRAM between variants (anti-fragmentation)
