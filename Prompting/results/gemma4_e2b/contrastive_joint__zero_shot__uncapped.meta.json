@@ -1,0 +1,5 @@
+{
+  "variant": "contrastive_joint__zero_shot__uncapped",
+  "mean_latency_s": 3.0325453051365914,
+  "n_docs": 100
+}

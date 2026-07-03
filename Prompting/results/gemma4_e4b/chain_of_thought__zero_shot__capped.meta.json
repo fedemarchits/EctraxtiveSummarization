@@ -1,0 +1,5 @@
+{
+  "variant": "chain_of_thought__zero_shot__capped",
+  "mean_latency_s": 3.203775967542315,
+  "n_docs": 100
+}

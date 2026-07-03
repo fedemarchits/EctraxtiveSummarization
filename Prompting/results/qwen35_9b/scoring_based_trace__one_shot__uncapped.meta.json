@@ -1,0 +1,5 @@
+{
+  "variant": "scoring_based_trace__one_shot__uncapped",
+  "mean_latency_s": 5.4075081860926,
+  "n_docs": 100
+}

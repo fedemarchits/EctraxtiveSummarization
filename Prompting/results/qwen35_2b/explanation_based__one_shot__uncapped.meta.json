@@ -1,0 +1,5 @@
+{
+  "variant": "explanation_based__one_shot__uncapped",
+  "mean_latency_s": 7.310890619990532,
+  "n_docs": 100
+}

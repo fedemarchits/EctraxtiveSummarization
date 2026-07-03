@@ -1,0 +1,5 @@
+{
+  "variant": "least_to_most__zero_shot__capped",
+  "mean_latency_s": 3.3990100204385816,
+  "n_docs": 100
+}
