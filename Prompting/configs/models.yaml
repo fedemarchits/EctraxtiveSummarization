@@ -49,7 +49,9 @@ models:
     family: gemma4
     tier: medium
     backend: local
-    device_map: auto        # ~24GB bf16 -> shard across 2x 3090 (run with GPUS=0,1)
+    load_in_4bit: true      # NF4: ~24GB bf16 -> ~7GB, fits ONE 3090 (no 2-GPU shard).
+                            # NOTE: quantized -> not precision-comparable to bf16 models;
+                            # report gemma4_12b separately, labelled "(4-bit)".
 
   - alias: gemma4_31b
     hf_id: google/gemma-4-31B-it

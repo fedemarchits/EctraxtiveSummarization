@@ -30,7 +30,7 @@ class GenConfig:
 # --------------------------------------------------------------------------
 
 class LocalHFBackend:
-    def __init__(self, hf_id: str, gen: GenConfig, device_map=None):
+    def __init__(self, hf_id: str, gen: GenConfig, device_map=None, load_in_4bit: bool = False):
         self.hf_id = hf_id
         self.gen = gen
         # Placement: default single-GPU {"":0}. `device_map="auto"` (set per
@@ -38,6 +38,9 @@ class LocalHFBackend:
         # too big for one 3090 (e.g. gemma4_12b on 2x3090). Single-GPU avoids
         # the multimodal Gemma-4 meta-offload crash, so keep it as the default.
         self.device_map = device_map if device_map is not None else {"": 0}
+        # 4-bit (NF4 + double-quant) shrinks a 12B to ~7GB so it fits ONE 3090,
+        # avoiding the slow 2-GPU shard. Set `load_in_4bit: true` in models.yaml.
+        self.load_in_4bit = load_in_4bit
         self._model = None
         self._tok = None
 
@@ -50,9 +53,20 @@ class LocalHFBackend:
         tok = AutoTokenizer.from_pretrained(self.hf_id, trust_remote_code=True)
         model_kwargs = dict(
             trust_remote_code=True,
-            dtype=torch.bfloat16,
             device_map=self.device_map,
         )
+        if self.load_in_4bit:
+            # Quantized: fits one GPU, so keep device_map single-GPU. compute
+            # dtype stays bf16; do NOT also pass a top-level `dtype`.
+            from transformers import BitsAndBytesConfig
+            model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+        else:
+            model_kwargs["dtype"] = torch.bfloat16
         # When sharding ("auto"), cap memory to the GPUs only so nothing spills
         # to CPU/disk (which reintroduces the meta-device crash).
         if self.device_map == "auto":
@@ -193,7 +207,8 @@ def get_backend(alias: str, models_yaml: str, gen: Optional[GenConfig] = None):
     gen = gen or GenConfig()
     kind = m.get("backend", "local")
     if kind == "local":
-        return LocalHFBackend(m["hf_id"], gen, device_map=m.get("device_map"))
+        return LocalHFBackend(m["hf_id"], gen, device_map=m.get("device_map"),
+                              load_in_4bit=bool(m.get("load_in_4bit", False)))
     if kind == "endpoint":
         return EndpointBackend(m.get("endpoint_model", m["hf_id"]), gen)
     raise ValueError(f"unknown backend '{kind}' for model {alias}")
