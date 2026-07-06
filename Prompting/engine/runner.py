@@ -20,7 +20,8 @@ from . import data as D
 from . import metrics as M
 from .backends import GenConfig, get_backend
 from .grid import resolve_variants
-from .wrappers import select_document
+from .postprocess import cap_indices_in_order
+from .wrappers import _parse_batch, select_document
 
 SYSTEM = "You are an expert in extractive summarization."
 
@@ -56,6 +57,26 @@ def run_variant(variant, backend, test, train, abs_by_id, aspects, caps, seed,
     tmp = out_path.with_suffix(".jsonl.partial")
     latencies: List[float] = []
 
+    # Fast path: vLLM-style backends want EVERY prompt of the variant at once so
+    # continuous batching kicks in (100 docs x 3 aspects in one call), instead of
+    # the per-doc call the HF path uses. Only when no per-doc wrapper is active
+    # (self_consistency / dynamic_capper each need their own extra passes).
+    fast = (getattr(backend, "wants_full_batch", False)
+            and not (sc and sc.get("enabled"))
+            and not (dyn and dyn.get("enabled")))
+    precomputed = None
+    if fast:
+        na = len(aspects)
+        flat = []
+        for doc_idx in range(len(test)):
+            sents = test[doc_idx]["source_sentences"]
+            flat.extend(tech.build(sents, a, ctxs[a]) for a in aspects)
+        t0 = time.perf_counter()
+        flat_outs = backend.generate_batch(flat, system=SYSTEM)
+        dt = time.perf_counter() - t0
+        precomputed = [flat_outs[i * na:(i + 1) * na] for i in range(len(test))]
+        latencies = [dt / max(len(test), 1)] * len(test)  # mean per doc
+
     with tmp.open("w", encoding="utf-8") as fh:
         for doc_idx in range(len(test)):
             doc = test[doc_idx]
@@ -64,10 +85,18 @@ def run_variant(variant, backend, test, train, abs_by_id, aspects, caps, seed,
             gold = D.gold_for_doc(doc, aspects)
             abs_ref = abs_by_id.get(doc_id) if abs_by_id else None
 
-            prompts = [tech.build(sents, a, ctxs[a]) for a in aspects]
-            t0 = time.perf_counter()
-            preds, raws = select_document(backend, prompts, aspects, sents, caps, variant, sc, dyn, SYSTEM)
-            latencies.append(time.perf_counter() - t0)
+            if precomputed is not None:
+                outs = precomputed[doc_idx]
+                preds = _parse_batch(outs, aspects, n)
+                for a in aspects:
+                    if variant.cap is Cap.CAPPED:
+                        preds[a] = cap_indices_in_order(preds[a], caps.get(a))
+                raws = {a: outs[j] for j, a in enumerate(aspects)}
+            else:
+                prompts = [tech.build(sents, a, ctxs[a]) for a in aspects]
+                t0 = time.perf_counter()
+                preds, raws = select_document(backend, prompts, aspects, sents, caps, variant, sc, dyn, SYSTEM)
+                latencies.append(time.perf_counter() - t0)
 
             for a in aspects:
                 m = M.prf(gold[a], preds[a])

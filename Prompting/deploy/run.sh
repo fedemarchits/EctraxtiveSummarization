@@ -22,9 +22,10 @@ echo "HF_HOME     : $HF_HOME"
 echo "endpoint    : ${OPENAI_BASE_URL:-<unset>}"
 echo "=============================="
 
-# bitsandbytes isn't baked into the image; install it once at runtime only if
-# missing (needed by 4-bit models like gemma4_12b, load_in_4bit in models.yaml).
+# bitsandbytes / vllm aren't baked into the image; install once at runtime only
+# if missing (bitsandbytes: 4-bit weights; vllm: fast backend for gemma4_12b).
 python -c "import bitsandbytes" 2>/dev/null || pip install -q bitsandbytes
+python -c "import vllm" 2>/dev/null || pip install -q vllm
 
 # One-time: cache reference reasoning traces (skips files that already exist
 # is handled inside; set BUILD_RATIONALES=1 to (re)generate).

@@ -6,7 +6,8 @@ scikit-learn        # TF-IDF centrality (tool_augmented)
 datasets
 transformers
 accelerate          # required by device_map="auto" in the local backend
-bitsandbytes        # 4-bit (NF4) quantization for gemma4_12b (load_in_4bit)
+bitsandbytes        # 4-bit weights (in-flight quant for gemma4_12b)
+vllm                # fast local backend (fused kernels + continuous batching)
 torch
 openai              # endpoint backend (large tiers)
 rouge-score

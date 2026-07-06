@@ -139,6 +139,80 @@ class LocalHFBackend:
 
 
 # --------------------------------------------------------------------------
+# vLLM (fast local inference: fused quant kernels + continuous batching)
+# --------------------------------------------------------------------------
+
+class VLLMBackend:
+    # Signals the runner to hand this backend EVERY prompt of a variant at once
+    # (100 docs x 3 aspects) so continuous batching kicks in. HF backends leave
+    # this False and get the per-doc path.
+    wants_full_batch = True
+
+    def __init__(self, hf_id: str, gen: GenConfig, quantization: Optional[str] = None,
+                 tensor_parallel_size: int = 1, max_model_len: Optional[int] = None,
+                 gpu_memory_utilization: float = 0.90, disable_reasoning: bool = True):
+        self.hf_id = hf_id
+        self.gen = gen
+        self.quantization = quantization
+        self.tp = tensor_parallel_size
+        self.max_model_len = max_model_len
+        self.gpu_mem = gpu_memory_utilization
+        self.disable_reasoning = disable_reasoning
+        self._llm = None
+        self._tok = None
+        self._sp = None
+
+    def _ensure(self):
+        if self._llm is not None:
+            return
+        from vllm import LLM, SamplingParams
+        from transformers import AutoTokenizer
+
+        self._tok = AutoTokenizer.from_pretrained(self.hf_id, trust_remote_code=True)
+        kw = dict(
+            model=self.hf_id, trust_remote_code=True,
+            tensor_parallel_size=self.tp,
+            gpu_memory_utilization=self.gpu_mem,
+            dtype="bfloat16",
+        )
+        if self.max_model_len:
+            kw["max_model_len"] = self.max_model_len
+        if self.quantization:
+            kw["quantization"] = self.quantization
+            # in-flight bitsandbytes needs the matching load_format; it's also
+            # single-GPU only (tp must be 1).
+            if self.quantization == "bitsandbytes":
+                kw["load_format"] = "bitsandbytes"
+        self._llm = LLM(**kw)
+        # temperature 0 -> greedy/deterministic (seed then irrelevant).
+        self._sp = SamplingParams(
+            temperature=self.gen.temperature,
+            max_tokens=self.gen.max_new_tokens,
+            seed=self.gen.seed if self.gen.temperature > 0 else None,
+        )
+
+    def generate_batch(self, prompts: List[str], system: Optional[str] = None) -> List[str]:
+        self._ensure()
+        tok = self._tok
+        tmpl_kwargs = {}
+        if "qwen" in self.hf_id.lower() and self.disable_reasoning:
+            tmpl_kwargs["enable_thinking"] = False
+        chats = []
+        for p in prompts:
+            msgs = ([{"role": "system", "content": system}] if system else []) + [
+                {"role": "user", "content": p}
+            ]
+            chats.append(tok.apply_chat_template(
+                msgs, tokenize=False, add_generation_prompt=True, **tmpl_kwargs))
+        # vLLM returns RequestOutputs in input order.
+        outs = self._llm.generate(chats, self._sp, use_tqdm=False)
+        return [o.outputs[0].text for o in outs]
+
+    def free_memory(self) -> None:  # vLLM manages its own KV cache
+        pass
+
+
+# --------------------------------------------------------------------------
 # OpenAI-compatible endpoint
 # --------------------------------------------------------------------------
 
@@ -209,6 +283,14 @@ def get_backend(alias: str, models_yaml: str, gen: Optional[GenConfig] = None):
     if kind == "local":
         return LocalHFBackend(m["hf_id"], gen, device_map=m.get("device_map"),
                               load_in_4bit=bool(m.get("load_in_4bit", False)))
+    if kind == "vllm":
+        return VLLMBackend(
+            m["hf_id"], gen,
+            quantization=m.get("quantization"),
+            tensor_parallel_size=int(m.get("tensor_parallel_size", 1)),
+            max_model_len=m.get("max_model_len"),
+            gpu_memory_utilization=float(m.get("gpu_memory_utilization", 0.90)),
+        )
     if kind == "endpoint":
         return EndpointBackend(m.get("endpoint_model", m["hf_id"]), gen)
     raise ValueError(f"unknown backend '{kind}' for model {alias}")

@@ -48,10 +48,13 @@ models:
     hf_id: google/gemma-4-12B-it
     family: gemma4
     tier: medium
-    backend: local
-    load_in_4bit: true      # NF4: ~24GB bf16 -> ~7GB, fits ONE 3090 (no 2-GPU shard).
-                            # NOTE: quantized -> not precision-comparable to bf16 models;
-                            # report gemma4_12b separately, labelled "(4-bit)".
+    backend: vllm           # fast: fused kernels + continuous batching (HF .generate was ~2h/variant).
+    quantization: bitsandbytes   # in-flight 4-bit -> fits ONE 3090 (tp must stay 1).
+    tensor_parallel_size: 1
+    max_model_len: 4096          # cap KV cache so it fits alongside the 4-bit weights on 24GB.
+    gpu_memory_utilization: 0.90
+    # NOTE: quantized -> not precision-comparable to the bf16 models; report
+    # gemma4_12b separately, labelled "(4-bit)".
 
   - alias: gemma4_31b
     hf_id: google/gemma-4-31B-it
