@@ -7,7 +7,9 @@ datasets
 transformers
 accelerate          # required by device_map="auto" in the local backend
 bitsandbytes        # 4-bit weights (in-flight quant for gemma4_12b)
-vllm                # fast local backend (fused kernels + continuous batching)
+vllm==0.6.6.post1   # PINNED to the release built for torch 2.5.1 / CUDA 12.1.
+                    # Do NOT unpin: newer vllm pulls torch 2.11 + CUDA 13, which
+                    # breaks on the image's cu121 base + this driver (CUDA 12.4).
 torch
 openai              # endpoint backend (large tiers)
 rouge-score
