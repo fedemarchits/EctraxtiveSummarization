@@ -1,5 +1,5 @@
 {
   "variant": "negative_aware__one_shot__uncapped",
-  "mean_latency_s": 4.610471325386316,
+  "mean_latency_s": 0.7581063436577097,
   "n_docs": 100
 }

@@ -1,5 +1,5 @@
 {
   "variant": "chain_of_thought__zero_shot__uncapped",
-  "mean_latency_s": 3.574472800695803,
+  "mean_latency_s": 0.4234670278383419,
   "n_docs": 100
 }

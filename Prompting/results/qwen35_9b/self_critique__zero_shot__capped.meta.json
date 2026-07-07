@@ -1,0 +1,5 @@
+{
+  "variant": "self_critique__zero_shot__capped",
+  "mean_latency_s": 0.4095122225722298,
+  "n_docs": 100
+}

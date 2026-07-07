@@ -1,5 +1,5 @@
 {
   "variant": "contrastive_joint__one_shot__uncapped",
-  "mean_latency_s": 4.622683541050646,
+  "mean_latency_s": 0.737089680810459,
   "n_docs": 100
 }

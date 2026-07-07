@@ -1,5 +1,5 @@
 {
   "variant": "salience_inference_trace__one_shot__capped",
-  "mean_latency_s": 4.928075928888283,
+  "mean_latency_s": 0.9258882313827053,
   "n_docs": 100
 }
