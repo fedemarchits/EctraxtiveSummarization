@@ -143,6 +143,27 @@ from diluting the summary.
 The exemplar **hurts the smallest models** (`2b`, `e2b`) and **helps as size
 grows** — capacity to use a worked example appears with scale.
 
+### How the rationale (trace) exemplars were built
+
+The `_trace` variants show a one-shot example whose reasoning was produced
+**once** by a strong reference model — **Qwen3.5-397B** (`qwen35_397b`, via
+endpoint) — not by the grid model being evaluated. Built by
+`scripts/build_rationales.py`:
+
+1. For each reasoning technique × aspect, draw candidate exemplars from the
+   **TRAIN** split only (never test).
+2. Ask the 397B to solve the exemplar **and reveal its step-by-step reasoning**,
+   ending with a parseable `Selected indices: [...]` line.
+3. **Verify against human gold**: score the model's picks (F1). Try up to 10
+   exemplars — early-accept at F1 ≥ 0.7, otherwise keep the best if it clears
+   0.4; below that, that cell falls back to an answer-only one-shot.
+4. Cache the `(exemplar, reasoning trace, gold)` once; **every grid model reuses
+   the same frozen trace**.
+
+So a trace is a *verified, gold-aligned reasoning demonstration from a large
+model*, shown identically to every smaller model — which isolates the effect of
+"showing **how** to reason" from each model's own capability.
+
 ### Comparison 3 — one-shot: answer-only vs. rationale (trace)
 
 For the four techniques with a `_trace` variant (`chain_of_thought`,
